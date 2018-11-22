@@ -7,5 +7,4 @@ public class Constants {
     public static String BASE_IMAGE_URL = "http://image.tmdb.org/t/p/original/";
     public static String API_KEY = "";
     public static String ENGLISH_LANGUAGE = "en-US";
-
 }

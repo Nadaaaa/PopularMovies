@@ -1,9 +1,13 @@
 package com.example.hp.popularmovies.Activities;
 
+import android.arch.lifecycle.Observer;
+import android.arch.lifecycle.ViewModelProviders;
 import android.content.Context;
 import android.content.Intent;
 import android.os.Handler;
+import android.support.annotation.Nullable;
 import android.support.constraint.ConstraintLayout;
+import android.support.design.widget.CoordinatorLayout;
 import android.support.design.widget.Snackbar;
 import android.support.v7.app.AppCompatActivity;
 import android.os.Bundle;
@@ -16,11 +20,14 @@ import android.view.View;
 import android.widget.TextView;
 
 import com.example.hp.popularmovies.Adapters.MovieAdapter;
+import com.example.hp.popularmovies.Database.FavoriteMovie;
+import com.example.hp.popularmovies.Database.MainViewModel;
 import com.example.hp.popularmovies.Models.Movie;
 import com.example.hp.popularmovies.NetworkUtils.Retrofit;
 import com.example.hp.popularmovies.R;
 import com.example.hp.popularmovies.ResponseModels.MoviesResponse;
 import com.example.hp.popularmovies.Utils.Constants;
+import com.example.hp.popularmovies.Utils.Utils;
 import com.google.gson.Gson;
 import com.wang.avi.AVLoadingIndicatorView;
 
@@ -39,14 +46,17 @@ public class MoviesActivity extends AppCompatActivity implements MovieAdapter.Li
     // Views
     private RecyclerView mMoviesList;
     private Toolbar toolbar;
-    private TextView title;
+    private TextView title, tv_noFavourite;
     private AVLoadingIndicatorView avi;
-    private ConstraintLayout moviesLayout;
-    private Boolean isInTopRated = false;
+    private CoordinatorLayout moviesLayout;
 
     // Variables
     MovieAdapter movieAdapter;
     List<Movie> tempMovieList;
+
+    //Database
+    private List<FavoriteMovie> favoriteMovieList;
+    private Boolean isInTopRated = false;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -63,6 +73,8 @@ public class MoviesActivity extends AppCompatActivity implements MovieAdapter.Li
 
         moviesLayout = findViewById(R.id.movies_constraintLayout);
 
+        tv_noFavourite = findViewById(R.id.movies_noFavourite);
+
         if (!isConnectedToInternet(this)) {
             showErrorSnackBar(getApplicationContext(), moviesLayout, getResources().getString(R.string.check_Internet_connection));
         } else {
@@ -77,8 +89,10 @@ public class MoviesActivity extends AppCompatActivity implements MovieAdapter.Li
         mMoviesList.setLayoutManager(gridLayoutManager);
         mMoviesList.setHasFixedSize(false);
         mMoviesList.setAdapter(movieAdapter);
-    }
 
+        favoriteMovieList = new ArrayList<>();
+        setupViewModel();
+    }
 
     // Menu Functions.
     @Override
@@ -91,6 +105,7 @@ public class MoviesActivity extends AppCompatActivity implements MovieAdapter.Li
     public boolean onOptionsItemSelected(MenuItem item) {
         switch (item.getItemId()) {
             case R.id.mostPopular:
+                tv_noFavourite.setVisibility(View.GONE);
                 title.setText(R.string.most_popular);
                 mMoviesList.scrollToPosition(0);
                 if (!isConnectedToInternet(this)) {
@@ -101,6 +116,7 @@ public class MoviesActivity extends AppCompatActivity implements MovieAdapter.Li
                 break;
 
             case R.id.highestRated:
+                tv_noFavourite.setVisibility(View.GONE);
                 isInTopRated = true;
                 title.setText(R.string.top_rated);
                 mMoviesList.scrollToPosition(0);
@@ -109,6 +125,12 @@ public class MoviesActivity extends AppCompatActivity implements MovieAdapter.Li
                 } else {
                     getTopRatedMovies();
                 }
+                break;
+
+            case R.id.favourite:
+                title.setText(R.string.favourite);
+                mMoviesList.scrollToPosition(0);
+                getFavouriteMovies();
                 break;
         }
         return true;
@@ -191,6 +213,46 @@ public class MoviesActivity extends AppCompatActivity implements MovieAdapter.Li
                         stopAnim();
                     }
                 });
+    }
+
+    // Favourite Movies
+    void getFavouriteMovies() {
+        tempMovieList.clear();
+        if (favoriteMovieList.size() == 0) {
+            tv_noFavourite.setVisibility(View.VISIBLE);
+        } else {
+            tv_noFavourite.setVisibility(View.GONE);
+            for (int i = 0; i < favoriteMovieList.size(); i++) {
+                Movie favouriteMovie = new Movie(
+                        favoriteMovieList.get(i).getId(),
+                        favoriteMovieList.get(i).getName(),
+                        favoriteMovieList.get(i).getImage(),
+                        favoriteMovieList.get(i).getReleaseDate(),
+                        favoriteMovieList.get(i).getRate(),
+                        favoriteMovieList.get(i).getPlot(),
+                        favoriteMovieList.get(i).getCategory()
+                );
+                tempMovieList.add(favouriteMovie);
+            }
+            movieAdapter.notifyDataSetChanged();
+        }
+    }
+
+    private void setupViewModel() {
+        MainViewModel viewModel = ViewModelProviders.of(this).get(MainViewModel.class);
+        viewModel.getMovies().observe(this, new Observer<List<FavoriteMovie>>() {
+            @Override
+            public void onChanged(@Nullable List<FavoriteMovie> favoriteMovies) {
+                if (favoriteMovies.size() > 0) {
+                    favoriteMovieList.clear();
+                    favoriteMovieList = favoriteMovies;
+                } else if (favoriteMovies.size() == 0) {
+                    favoriteMovieList.clear();
+                }
+                if (title.getText().toString().equals(getResources().getString(R.string.favourite)))
+                    getFavouriteMovies();
+            }
+        });
     }
 
     //SnackBar

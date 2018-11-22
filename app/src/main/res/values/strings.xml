@@ -12,10 +12,17 @@
     <string name="check_Internet_connection">Check Internet Connection</string>
     <string name="retry">Retry</string>
     <string name="internet_successfully_connected">Internet Successfully Connected</string>
+    <string name="title_watch_trailer">Watch Trailer</string>
+    <string name="title_reviews">Reviews</string>
+    <string name="author">Author</string>
+    <string name="no_reviews">No Reviews</string>
+    <string name="favourite">Favourite</string>
+    <string name="no_favourite">No Favourite Movies</string>
 
     <!-- content description-->
     <string name="movie_image">movie image</string>
     <string name="back_image">back image</string>
+    <string name="share_image">share image</string>
 
     <!-- Lorem ipsum-->
     <string name="lorem_ipsum">Lorem ipsum dolor sit amet, consectetur adipiscing elit,
