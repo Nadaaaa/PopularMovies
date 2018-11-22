@@ -5,6 +5,7 @@ import android.arch.lifecycle.ViewModelProviders;
 import android.content.Context;
 import android.content.Intent;
 import android.os.Handler;
+import android.os.Parcelable;
 import android.support.annotation.Nullable;
 import android.support.constraint.ConstraintLayout;
 import android.support.design.widget.CoordinatorLayout;
@@ -53,6 +54,9 @@ public class MoviesActivity extends AppCompatActivity implements MovieAdapter.Li
     // Variables
     MovieAdapter movieAdapter;
     List<Movie> tempMovieList;
+    Parcelable mMoviesListState;
+    String mMoviesListPositionKey = "LIST_POSITION_KEY";
+    GridLayoutManager gridLayoutManager;
 
     //Database
     private List<FavoriteMovie> favoriteMovieList;
@@ -85,13 +89,22 @@ public class MoviesActivity extends AppCompatActivity implements MovieAdapter.Li
         mMoviesList = findViewById(R.id.rv_movies);
         tempMovieList = new ArrayList<>();
         movieAdapter = new MovieAdapter(getApplicationContext(), tempMovieList, this);
-        GridLayoutManager gridLayoutManager = new GridLayoutManager(this, mNumberOfColumnsInGridLayout);
+        gridLayoutManager = new GridLayoutManager(this, mNumberOfColumnsInGridLayout);
         mMoviesList.setLayoutManager(gridLayoutManager);
         mMoviesList.setHasFixedSize(false);
         mMoviesList.setAdapter(movieAdapter);
 
         favoriteMovieList = new ArrayList<>();
         setupViewModel();
+    }
+
+    @Override
+    protected void onResume() {
+        super.onResume();
+
+        if (mMoviesListState != null) {
+            gridLayoutManager.onRestoreInstanceState(mMoviesListState);
+        }
     }
 
     // Menu Functions.
@@ -107,7 +120,7 @@ public class MoviesActivity extends AppCompatActivity implements MovieAdapter.Li
             case R.id.mostPopular:
                 tv_noFavourite.setVisibility(View.GONE);
                 title.setText(R.string.most_popular);
-                mMoviesList.scrollToPosition(0);
+                // mMoviesList.scrollToPosition(0);
                 if (!isConnectedToInternet(this)) {
                     showErrorSnackBar(getApplicationContext(), moviesLayout, getResources().getString(R.string.check_Internet_connection));
                 } else {
@@ -119,7 +132,7 @@ public class MoviesActivity extends AppCompatActivity implements MovieAdapter.Li
                 tv_noFavourite.setVisibility(View.GONE);
                 isInTopRated = true;
                 title.setText(R.string.top_rated);
-                mMoviesList.scrollToPosition(0);
+                // mMoviesList.scrollToPosition(0);
                 if (!isConnectedToInternet(this)) {
                     showErrorSnackBar(getApplicationContext(), moviesLayout, getResources().getString(R.string.check_Internet_connection));
                 } else {
@@ -129,7 +142,7 @@ public class MoviesActivity extends AppCompatActivity implements MovieAdapter.Li
 
             case R.id.favourite:
                 title.setText(R.string.favourite);
-                mMoviesList.scrollToPosition(0);
+                //mMoviesList.scrollToPosition(0);
                 getFavouriteMovies();
                 break;
         }
@@ -287,6 +300,21 @@ public class MoviesActivity extends AppCompatActivity implements MovieAdapter.Li
 
     void stopAnim() {
         avi.smoothToHide();
+    }
+
+    // save list state.
+    @Override
+    protected void onSaveInstanceState(Bundle outState) {
+        super.onSaveInstanceState(outState);
+        outState.putParcelable(mMoviesListPositionKey,
+                mMoviesList.getLayoutManager().onSaveInstanceState());
+    }
+
+    @Override
+    protected void onRestoreInstanceState(Bundle state) {
+        super.onRestoreInstanceState(state);
+        mMoviesListState = state.getParcelable(mMoviesListPositionKey);
+        mMoviesList.getLayoutManager().onRestoreInstanceState(mMoviesListState);
     }
 
 }
