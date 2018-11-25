@@ -39,6 +39,12 @@ import retrofit2.Call;
 import retrofit2.Callback;
 import retrofit2.Response;
 
+import static com.example.hp.popularmovies.Utils.Constants.CURRENT_SORT_KEY;
+import static com.example.hp.popularmovies.Utils.Constants.FAVOURITE;
+import static com.example.hp.popularmovies.Utils.Constants.LIST_POS_KEY;
+import static com.example.hp.popularmovies.Utils.Constants.LIST_STATE_KEY;
+import static com.example.hp.popularmovies.Utils.Constants.POPULAR_MOVIES;
+import static com.example.hp.popularmovies.Utils.Constants.TOP_RATED;
 import static com.example.hp.popularmovies.Utils.Constants.mNumberOfColumnsInGridLayout;
 import static com.example.hp.popularmovies.Utils.Utils.isConnectedToInternet;
 
@@ -52,11 +58,13 @@ public class MoviesActivity extends AppCompatActivity implements MovieAdapter.Li
     private CoordinatorLayout moviesLayout;
 
     // Variables
-    MovieAdapter movieAdapter;
-    List<Movie> tempMovieList;
-    Parcelable mMoviesListState;
-    String mMoviesListPositionKey = "LIST_POSITION_KEY";
-    GridLayoutManager gridLayoutManager;
+    private  MovieAdapter movieAdapter;
+    private List<Movie> tempMovieList;
+    private Parcelable mMoviesListState;
+    private String mMoviesListPositionKey = "LIST_POSITION_KEY";
+    private GridLayoutManager gridLayoutManager;
+    private String mCurrentSort;
+
 
     //Database
     private List<FavoriteMovie> favoriteMovieList;
@@ -79,23 +87,29 @@ public class MoviesActivity extends AppCompatActivity implements MovieAdapter.Li
 
         tv_noFavourite = findViewById(R.id.movies_noFavourite);
 
-        if (!isConnectedToInternet(this)) {
-            showErrorSnackBar(getApplicationContext(), moviesLayout, getResources().getString(R.string.check_Internet_connection));
+        mMoviesList = findViewById(R.id.rv_movies);
+        tempMovieList = new ArrayList<>();
+
+        if (savedInstanceState != null) {
+            mCurrentSort = savedInstanceState.getString(CURRENT_SORT_KEY);
         } else {
-            getPopularMovies();
+            mCurrentSort = POPULAR_MOVIES;
         }
 
         // Recycler View and adapter.
-        mMoviesList = findViewById(R.id.rv_movies);
-        tempMovieList = new ArrayList<>();
-        movieAdapter = new MovieAdapter(getApplicationContext(), tempMovieList, this);
-        gridLayoutManager = new GridLayoutManager(this, mNumberOfColumnsInGridLayout);
-        mMoviesList.setLayoutManager(gridLayoutManager);
-        mMoviesList.setHasFixedSize(false);
-        mMoviesList.setAdapter(movieAdapter);
+        if(movieAdapter==null) {
+            movieAdapter = new MovieAdapter(getApplicationContext(), tempMovieList, this);
+            gridLayoutManager = new GridLayoutManager(this, mNumberOfColumnsInGridLayout);
+            mMoviesList.setLayoutManager(gridLayoutManager);
+            mMoviesList.setHasFixedSize(false);
+            mMoviesList.setAdapter(movieAdapter);
 
-        favoriteMovieList = new ArrayList<>();
-        setupViewModel();
+            favoriteMovieList = new ArrayList<>();
+            setupViewModel();
+
+            sortMovies();
+        }
+
     }
 
     @Override
@@ -118,32 +132,21 @@ public class MoviesActivity extends AppCompatActivity implements MovieAdapter.Li
     public boolean onOptionsItemSelected(MenuItem item) {
         switch (item.getItemId()) {
             case R.id.mostPopular:
+                mCurrentSort = POPULAR_MOVIES;
                 tv_noFavourite.setVisibility(View.GONE);
-                title.setText(R.string.most_popular);
-                // mMoviesList.scrollToPosition(0);
-                if (!isConnectedToInternet(this)) {
-                    showErrorSnackBar(getApplicationContext(), moviesLayout, getResources().getString(R.string.check_Internet_connection));
-                } else {
-                    getPopularMovies();
-                }
+                sortMovies();
                 break;
 
             case R.id.highestRated:
+                mCurrentSort = TOP_RATED;
                 tv_noFavourite.setVisibility(View.GONE);
                 isInTopRated = true;
-                title.setText(R.string.top_rated);
-                // mMoviesList.scrollToPosition(0);
-                if (!isConnectedToInternet(this)) {
-                    showErrorSnackBar(getApplicationContext(), moviesLayout, getResources().getString(R.string.check_Internet_connection));
-                } else {
-                    getTopRatedMovies();
-                }
+                sortMovies();
                 break;
 
             case R.id.favourite:
-                title.setText(R.string.favourite);
-                //mMoviesList.scrollToPosition(0);
-                getFavouriteMovies();
+                mCurrentSort = FAVOURITE;
+                sortMovies();
                 break;
         }
         return true;
@@ -157,7 +160,7 @@ public class MoviesActivity extends AppCompatActivity implements MovieAdapter.Li
         startActivity(new Intent(MoviesActivity.this, MovieDetailsActivity.class).putExtra("movie", movie));
     }
 
-    public void runnable() {
+    /*public void runnable() {
         final Handler handler = new Handler();
         handler.postDelayed(new Runnable() {
             @Override
@@ -165,7 +168,7 @@ public class MoviesActivity extends AppCompatActivity implements MovieAdapter.Li
                 getPopularMovies();
             }
         }, 5000);
-    }
+    }*/
 
     // Calling APIs Functions.
     public void getPopularMovies() {
@@ -249,6 +252,7 @@ public class MoviesActivity extends AppCompatActivity implements MovieAdapter.Li
             }
             movieAdapter.notifyDataSetChanged();
         }
+        stopAnim();
     }
 
     private void setupViewModel() {
@@ -306,6 +310,7 @@ public class MoviesActivity extends AppCompatActivity implements MovieAdapter.Li
     @Override
     protected void onSaveInstanceState(Bundle outState) {
         super.onSaveInstanceState(outState);
+        outState.putString(CURRENT_SORT_KEY, mCurrentSort);
         outState.putParcelable(mMoviesListPositionKey,
                 mMoviesList.getLayoutManager().onSaveInstanceState());
     }
@@ -313,8 +318,32 @@ public class MoviesActivity extends AppCompatActivity implements MovieAdapter.Li
     @Override
     protected void onRestoreInstanceState(Bundle state) {
         super.onRestoreInstanceState(state);
+        mCurrentSort = state.getString(CURRENT_SORT_KEY);
         mMoviesListState = state.getParcelable(mMoviesListPositionKey);
         mMoviesList.getLayoutManager().onRestoreInstanceState(mMoviesListState);
+    }
+
+
+    public void sortMovies() {
+        if (mCurrentSort.equals(POPULAR_MOVIES)) {
+            title.setText(R.string.most_popular);
+            if (!isConnectedToInternet(this)) {
+                showErrorSnackBar(getApplicationContext(), moviesLayout, getResources().getString(R.string.check_Internet_connection));
+            } else {
+                getPopularMovies();
+            }
+        } else if (mCurrentSort.equals(TOP_RATED)) {
+            title.setText(R.string.top_rated);
+            if (!isConnectedToInternet(this)) {
+                showErrorSnackBar(getApplicationContext(), moviesLayout, getResources().getString(R.string.check_Internet_connection));
+            } else {
+                getTopRatedMovies();
+            }
+        } else {
+            title.setText(R.string.favourite);
+            getFavouriteMovies();
+        }
+
     }
 
 }

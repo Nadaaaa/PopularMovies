@@ -12,7 +12,7 @@
         android:roundIcon="@drawable/popular_movies_logo"
         android:supportsRtl="true"
         android:theme="@style/AppTheme">
-        <activity android:name=".Activities.MoviesActivity">
+        <activity android:name=".Activities.MoviesActivity" android:configChanges="orientation" android:alwaysRetainTaskState="true">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
 
